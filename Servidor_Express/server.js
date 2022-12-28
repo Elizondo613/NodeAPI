@@ -18,7 +18,19 @@ const swaggerSpec = {
             {
                 url: "http://localhost:3000"
             }
-        ]
+        ],
+        components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT'
+                }
+            }
+        },
+        security: [{
+            bearerAuth: []
+        }]
     },
     apis: [`${path.join(__dirname, "./server.js")}`]
 }
@@ -48,10 +60,12 @@ let productos = [
 ]
 
 app.use(express.json())
+app.use(express.urlencoded({extended: false}))
 app.use(morgan('dev')) //Muestra en consola los endpoints visitados
 app.use("/api-doc", swaggerUI.serve, swaggerUI.setup(swaggerJsDoc(swaggerSpec)))
 
-//JWT - - - - - - - - - - - - -
+
+//Usuario y verificación de token - - - - - - - - - - - - - - - -
 /**
  * @swagger
  *  components:
@@ -59,9 +73,6 @@ app.use("/api-doc", swaggerUI.serve, swaggerUI.setup(swaggerJsDoc(swaggerSpec)))
  *          user:
  *              type: object
  *              properties:
- *                  id:
- *                      type: integer
- *                      decription: the user id
  *                  name:
  *                      type: string
  *                      decription: the user name
@@ -69,13 +80,11 @@ app.use("/api-doc", swaggerUI.serve, swaggerUI.setup(swaggerJsDoc(swaggerSpec)))
  *                      type: string
  *                      description: the user email
  *              required:
- *                  - id
  *                  - name
  *                  - email
  *              example:
- *                  id: 001
- *                  name: jose
- *                  email: jose@gmail.com
+ *                  name: javi
+ *                  email: javi@gmail.com
  */
 
 /**
@@ -95,23 +104,40 @@ app.use("/api-doc", swaggerUI.serve, swaggerUI.setup(swaggerJsDoc(swaggerSpec)))
  *              200:
  *                  description: user login!
  */
-
 app.post('/api/login', (req, res) => {
-    const user = {
-        id: 1,
+    const usuario = {
         nombre: "Javi",
         email: "javi@gmail.com"
     }
+    const {nombre, email} = req.body;
 
-    //Token generado para validar acceso
-    jwt.sign({user: user}, 'secretKey', (err, token) => {
-        res.json({
-            token
-        })
+    const user = {nombre: usuario.nombre};
+
+    const accessToken = generateAccessToken(user);
+
+    res.header('authorization', accessToken).json({
+        token: accessToken
     });
 })
 
-//Inventario - - - - - - - - - - -
+function generateAccessToken(user){
+    return jwt.sign(user, process.env.SECRET, {expiresIn: '5m'});
+}
+
+function validateToken(req, res, next){
+    const accessToken = req.headers['authorization'];
+    if(!accessToken) res.sendStatus(403);
+
+    jwt.verify(accessToken, process.env.SECRET, (err, user) => {
+        if(err){
+            res.sendStatus(403);
+        }else{
+            next();
+        }
+    })
+}
+
+//Inventario - - - - - - - - - - - - - - - - - - - - - - -
 app.get('/', (req, res) => {
     res.send('Inicio de api');
 });
@@ -147,10 +173,10 @@ app.get('/', (req, res) => {
  *              - line
  *          example:
  *              id: 01
- *              name: playera Larr
- *              price: 100
- *              mark: 1
- *              line: 3          
+ *              nombre: playera Larr
+ *              precio: 100
+ *              marca: 1
+ *              linea: 3          
  */
 
 /**
@@ -169,7 +195,7 @@ app.get('/', (req, res) => {
  *                              items:
  *                                  $ref: '#/components/schemas/productos'
  */
-app.get('/api/productos', (req, res) => {
+app.get('/api/productos', validateToken, (req, res) => {
 
             res.json({ productos })
   
@@ -200,7 +226,7 @@ app.get('/api/productos', (req, res) => {
  *              404:
  *                  description: product not found
  */
-app.get('/api/productos/:id', (req, res) => {
+app.get('/api/productos/:id', validateToken, (req, res) => {
 
             let id = req.params.id
             let response = productos.filter((producto) => producto.id == id)
@@ -226,7 +252,7 @@ app.get('/api/productos/:id', (req, res) => {
  *              200:
  *                  description: new product added!
  */
-app.post('/api/productos', (req, res) => {
+app.post('/api/productos', validateToken, (req, res) => {
             let producto = {
                 id: productos[productos.length - 1].id + 1, //id incrementable
                 nombre: req.body.nombre,
@@ -267,7 +293,7 @@ app.post('/api/productos', (req, res) => {
  *              404:
  *                  description: product not foud
  */
-app.put('/api/productos/:id', (req, res) => {
+app.put('/api/productos/:id', validateToken, (req, res) => {
             let id = req.params.id
             let tmpProducto = {}
         
@@ -309,7 +335,7 @@ app.put('/api/productos/:id', (req, res) => {
  *              404:
  *                  description: product not found
  */
-app.delete('/api/productos/:id', (req, res) => {
+app.delete('/api/productos/:id', validateToken, (req, res) => {
             let productoTmp = productos.filter((producto) => req.params.id != producto.id)
     
             if(productoTmp.length == productos.length){
@@ -319,20 +345,6 @@ app.delete('/api/productos/:id', (req, res) => {
                 res.status(200).json({result: 1})
             } 
 })
-
-//Función para verificar token
-//Authorization: Bearer <token>
-function verifyToken(req, res, next){
-    const bearerHeader = req.headers['Authorization'];
-
-    if(typeof bearerHeader !== 'undefined'){
-        const bearerToken = bearerHeader.split(" ")[1]; //Toma Bearer <token>, hace el espacio y toma el token [1]
-        req.token = bearerToken;
-        next();
-    }else{
-        res.sendStatus(403);
-    }
-}
 
 app.listen(3000, () => {
     console.log('Server on port 3000');
