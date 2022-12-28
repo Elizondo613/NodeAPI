@@ -62,7 +62,7 @@ let productos = [
 
 app.use(express.json())
 app.use(express.urlencoded({extended: false}))
-app.use(morgan('dev')) //Muestra en consola los endpoints visitados
+app.use(morgan('dev'))
 app.use("/api-doc", swaggerUI.serve, swaggerUI.setup(swaggerJsDoc(swaggerSpec)))
 
 
@@ -138,7 +138,7 @@ function validateToken(req, res, next){
     })
 }
 
-//Inventario - - - - - - - - - - - - - - - - - - - - - - -
+//Inventario productos - - - - - - - - - - - - - - - - - - - - - - -
 app.get('/', (req, res) => {
     res.send('Inicio de api');
 });
@@ -345,6 +345,143 @@ app.delete('/api/productos/:id', validateToken, (req, res) => {
                 productos = productoTmp
                 res.status(200).json({result: 1})
             } 
+})
+
+//Inventario marca - - - - - - - - - - - - - - - - - - - 
+/**
+ * @swagger
+ * components:
+ *  schemas:
+ *      marca:
+ *          type: object
+ *          properties:
+ *              id:
+ *                  type: integer
+ *                  description: id of product
+ *              name:
+ *                  type: string
+ *                  description: name of product
+ *              price:
+ *                  type: integer
+ *                  description: price of product
+ *              mark:
+ *                  type: integer
+ *                  description: mark of product
+ *              line:
+ *                  type: integer
+ *                  description: line of product
+ *          required:
+ *              - id
+ *              - name
+ *              - price
+ *              - mark
+ *              - line
+ *          example:
+ *              marca: 1
+ *              nombre: playera Larr
+ *              precio: 100
+ *              id: 01
+ *              linea: 3          
+*/
+//Obtener producto por marca
+/**
+ * @swagger
+ *  /api/marca/{marca}:
+ *      get:
+ *          summary: return product by mark
+ *          tags: [marca]
+ *          parameters:
+ *              - in: path
+ *                name: marca
+ *                schema:
+ *                  type: string
+ *                required: true
+ *                description: the product mark
+ *          responses:
+ *              200:
+ *                  description: only one product
+ *                  content:
+ *                      application/json:
+ *                          schema:
+ *                              type: object
+ *                              $ref: '#/components/schemas/marca'
+ *              404:
+ *                  description: product not found
+ */
+app.get('/api/marca/:marca', validateToken, (req, res) => {
+
+    let marca = req.params.marca
+    let response = productos.filter((producto) => producto.marca == marca)
+    res.json(response)
+
+})
+
+//Inventario Linea - - - - - - - - - - - - - - - - - - - - - -  
+/**
+ * @swagger
+ * components:
+ *  schemas:
+ *      linea:
+ *          type: object
+ *          properties:
+ *              id:
+ *                  type: integer
+ *                  description: id of product
+ *              name:
+ *                  type: string
+ *                  description: name of product
+ *              price:
+ *                  type: integer
+ *                  description: price of product
+ *              mark:
+ *                  type: integer
+ *                  description: mark of product
+ *              line:
+ *                  type: integer
+ *                  description: line of product
+ *          required:
+ *              - id
+ *              - name
+ *              - price
+ *              - mark
+ *              - line
+ *          example:
+ *              marca: 1
+ *              nombre: playera Larr
+ *              precio: 100
+ *              id: 01
+ *              linea: 3          
+*/
+/**
+ * @swagger
+ *  /api/linea/{linea}:
+ *      get:
+ *          summary: return product by line
+ *          tags: [linea]
+ *          parameters:
+ *              - in: path
+ *                name: linea
+ *                schema:
+ *                  type: string
+ *                required: true
+ *                description: the product line
+ *          responses:
+ *              200:
+ *                  description: only one product
+ *                  content:
+ *                      application/json:
+ *                          schema:
+ *                              type: object
+ *                              $ref: '#/components/schemas/linea'
+ *              404:
+ *                  description: product not found
+ */
+app.get('/api/marca/:linea', validateToken, (req, res) => {
+
+    let linea = req.params.linea
+    let response = productos.filter((producto) => producto.linea == linea)
+    res.json(response)
+
 })
 
 app.listen(3000, () => {
