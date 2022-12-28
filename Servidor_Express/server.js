@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const swaggerUI = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
 const path = require('path');
+const { read, write } = require('fs');
 require('dotenv').config();
 const app = express();
 //Swagger
@@ -21,15 +22,15 @@ const swaggerSpec = {
         ],
         components: {
             securitySchemes: {
-                bearerAuth: {
-                    type: 'http',
-                    scheme: 'bearer',
-                    bearerFormat: 'JWT'
+                ApiKeyAuth: {
+                    type: 'apiKey',
+                    in: 'header',
+                    name: 'Authorization'
                 }
             }
         },
         security: [{
-            bearerAuth: []
+            ApiKeyAuth: []
         }]
     },
     apis: [`${path.join(__dirname, "./server.js")}`]
@@ -83,7 +84,7 @@ app.use("/api-doc", swaggerUI.serve, swaggerUI.setup(swaggerJsDoc(swaggerSpec)))
  *                  - name
  *                  - email
  *              example:
- *                  name: javi
+ *                  nombre: javi
  *                  email: javi@gmail.com
  */
 
